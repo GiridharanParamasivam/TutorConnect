@@ -3,6 +3,37 @@ import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, Act
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 
+// Save session data
+export const saveSession = async (token, role) => {
+    try {
+        await AsyncStorage.setItem('userSession', JSON.stringify({ token, role }));
+        console.log('Session saved successfully.');
+    } catch (error) {
+        console.error('Failed to save session:', error);
+    }
+};
+
+// Get session data
+export const getSession = async () => {
+    try {
+        const session = await AsyncStorage.getItem('userSession');
+        return session ? JSON.parse(session) : null;
+    } catch (error) {
+        console.error('Failed to retrieve session:', error);
+        return null;
+    }
+};
+
+// Clear session data
+export const clearSession = async () => {
+    try {
+        await AsyncStorage.removeItem('userSession');
+        console.log('Session cleared.');
+    } catch (error) {
+        console.error('Failed to clear session:', error);
+    }
+};
+
 const LoginModal = ({ closeModal }) => {
     const [role, setRole] = useState(null);
     const [email, setEmail] = useState('');
@@ -18,36 +49,33 @@ const LoginModal = ({ closeModal }) => {
 
     const handleLogin = async () => {
         setLoading(true);
-        setError('');
-
         try {
             const response = await fetch('http://10.0.2.2:5000/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, role }),
             });
-
+    
             const data = await response.json();
-            if (response.ok) {
-                await AsyncStorage.setItem('token', data.token); // Store token with AsyncStorage
+            console.log('API response:', data); // Debugging
+    
+            if (response.ok && data.token) {
+                await AsyncStorage.setItem('token', data.token); // Store the token
+                await saveSession(data.token, role); // Save session with role
                 Alert.alert("Login successful!");
-
-                if (role === 'student') {
-                    navigation.navigate('StudentProfile');
-                } else if (role === 'professor') {
-                    navigation.navigate('ProfessorProfile');
-                }
+                navigation.navigate(role === 'student' ? 'StudentProfile' : 'ProfessorProfile');
             } else {
-                setError(data.message || "Login failed.");
+                console.error('Error response:', data);
+                Alert.alert('Error', data.message || 'Login failed.');
             }
         } catch (error) {
             console.error("Login error:", error);
-            setError("An error occurred during login. Please try again.");
+            Alert.alert('Error', 'An error occurred during login.');
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
-        closeModal();
     };
+    
 
     return (
         <View style={styles.modalOverlay}>
@@ -55,14 +83,14 @@ const LoginModal = ({ closeModal }) => {
                 {!role ? (
                     <>
                         <Text style={styles.title}>Select Your Role</Text>
-                        <TouchableOpacity 
-                            onPress={() => handleRoleSelection('student')} 
+                        <TouchableOpacity
+                            onPress={() => handleRoleSelection('student')}
                             style={[styles.button, role === 'student' && styles.activeButton]}
                         >
                             <Text style={styles.buttonText}>Student</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity 
-                            onPress={() => handleRoleSelection('professor')} 
+                        <TouchableOpacity
+                            onPress={() => handleRoleSelection('professor')}
                             style={[styles.button, role === 'professor' && styles.activeButton]}
                         >
                             <Text style={styles.buttonText}>Professor</Text>

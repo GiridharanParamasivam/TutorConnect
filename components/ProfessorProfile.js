@@ -19,7 +19,12 @@ const ProfessorProfile = ({ navigation }) => {
 
     const fetchProfile = async () => {
         try {
-            const token = 'your-token-here'; // Replace with your method to get the token
+            const token = await AsyncStorage.getItem('token');
+            if (!token) {
+                Alert.alert('Session Expired', 'Please login again.');
+                navigation.navigate('Home');
+                return;
+            }
             const response = await fetch('http://10.0.2.2:5000/professor_profile', {
                 method: 'GET',
                 headers: {
@@ -71,16 +76,30 @@ const ProfessorProfile = ({ navigation }) => {
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            await AsyncStorage.clear(); // Clear all session data
+            Alert.alert('Logged Out', 'You have been successfully logged out.');
+            navigation.navigate('Home'); // Navigate to Home/Login screen
+        } catch (error) {
+            console.error('Logout Error:', error);
+            Alert.alert('Error', 'Failed to log out. Please try again.');
+        }
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.logo}>Smart Tutor</Text>
-                <View style={styles.profileInfo}>
-                    <Text style={styles.profileInitials}>J</Text>
-                    <Text style={styles.profileName}>John</Text>
+                <View style={styles.headerButtons}>
                     <Button
                         title="My Bookings"
                         onPress={() => navigation.navigate('ViewBookings')}
+                    />
+                    <Button
+                        title="Logout"
+                        onPress={handleLogout}
+                        color="#ff6347" // Logout button with red color
                     />
                 </View>
             </View>
@@ -159,20 +178,10 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#fff',
     },
-    profileInfo: {
+    headerButtons: {
         flexDirection: 'row',
         alignItems: 'center',
-    },
-    profileInitials: {
-        backgroundColor: '#FF6347',
-        borderRadius: 50,
-        padding: 10,
-        color: '#fff',
-        marginRight: 10,
-    },
-    profileName: {
-        color: '#fff',
-        marginRight: 10,
+        gap: 10, // Add spacing between buttons
     },
     profileContainer: {
         marginTop: 20,
